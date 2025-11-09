@@ -1,0 +1,67 @@
+Challenge Overview
+The Mai Shan Yun Inventory Intelligence Challenge invites you to design and build an interactive dashboard that transforms raw restaurant data into actionable intelligence.
+You’ll be working with a real dataset from Mai Shan Yun including monthly purchase logs, ingredient usage, shipment details, and menu item sales trends.
+ Your mission? Help the restaurant optimize its inventory: minimizing waste, avoiding shortages, and predicting what to restock and when.
+The best submissions will blend data analytics, visual storytelling, and real-world impact to make restaurant management smoother than a perfect stir-fry.
+ 
+What You’ll Be Building
+A data-powered inventory management dashboard that provides restaurant managers with insights into their operations.
+Your dashboard should help answer questions like:
+●	Which ingredients are running low or being overstocked?
+
+●	How do menu item sales affect ingredient consumption over time?
+
+●	Are there seasonal or monthly trends in purchases or usage?
+
+●	Can we predict when to reorder specific ingredients based on historical patterns?
+
+Suggested Features
+Your dashboard might include:
+●	 Interactive visualizations of inventory levels, purchases, and usage trends.
+
+●	Ingredient insights: Track top-used and least-used ingredients by month.
+
+●	Predictive analytics: Forecast future ingredient needs based on menu item demand.
+
+●	Shipment tracking: Visualize shipment delays or frequency patterns.
+
+●	Cost optimization: Identify which items or ingredients drive the most spending.
+
+ 
+Judging Criteria
+Your submission will be evaluated on both analytical creativity and practical utility.
+Creativity & Insight (50%)
+●	Innovative Visualization: How engaging and clear are your visual insights?
+
+●	Smart Analytics: Did you uncover meaningful trends or predictions?
+
+●	Actionability: Does your dashboard empower decision-making (e.g., reorder alerts, trend forecasts)?
+
+Technical Merit & Utility (50%)
+●	Functionality: Does the dashboard actually work and pull insights  from the given data?
+   
+●	Data Handling: How well do you clean, merge, and analyze the multiple datasets?
+
+●	Usability: Is your interface intuitive and well-organized?
+
+●	Performance: Does it efficiently handle data without lag?
+Technical Requirements
+Your submission must include:
+●	A fully functional dashboard (built with any framework — e.g., Python Dash, Streamlit, React, or Tableau).
+●	A video demo 
+
+●	Integration of multiple data sources provided (purchases, shipments, ingredient lists, sales data, etc.).
+
+●	At least one predictive or trend-based feature (e.g., ingredient demand forecasting).
+
+You must provide:
+●	A clear README file and/or Devpost description detailing:
+
+○	The dashboard’s purpose and key insights.
+
+○	Datasets used and how they were integrated.
+
+○	Setup and run instructions.
+
+○	Example insights or use cases.
+
