@@ -1,105 +1,117 @@
-# Mai Shan Yun Inventory Intelligence Dashboard
+# Mai Shan Yun Business Analytics Dashboard
 
-A data-powered inventory management dashboard that provides restaurant managers with insights into their operations, helping optimize inventory by minimizing waste, avoiding shortages, and predicting when to restock ingredients.
+A comprehensive business analytics dashboard for Mai Shan Yun restaurant that provides insights into sales, inventory, and operations to help optimize business decisions.
 
-## Dashboard Purpose
+## Dashboard Purpose and Key Insights
 
-This dashboard transforms raw restaurant data into actionable intelligence by:
-- Tracking ingredient usage patterns and identifying top-used and least-used ingredients
-- Visualizing monthly trends in ingredient consumption
-- Monitoring shipment frequencies and patterns
-- Predicting future ingredient needs based on historical patterns
-- Providing cost optimization recommendations to identify overstocked items and potential shortages
+The dashboard provides three main analytical views:
 
-## Key Features
+**Dashboard Tab**
+- Monthly earnings overview with growth trends
+- Quick insights including best sellers, items to consider replacing, and ingredients to order more
+- Monthly earnings breakdown by category
+- AI Business Assistant for answering business questions and getting market intelligence
 
-### 1. Ingredient Insights
-- **Top Used Ingredients**: Visual bar chart showing the most frequently used ingredients across all months
-- **Least Used Ingredients**: Identifies ingredients with low usage to help optimize inventory
+**Inventory Analytics Tab**
+- Ingredient usage analysis and trends
+- Dish usage breakdown by ingredient
+- Monthly usage trends and forecasts
+- Estimated need analysis based on previous trends
+- Shipment statistics and inventory levels
 
-### 2. Monthly Usage Trends
-- Interactive line chart displaying usage trends for top ingredients over time (May - October)
-- Helps identify seasonal patterns and consumption trends
+**Item Analytics Tab**
+- Individual item performance metrics
+- Sales and revenue trends over time
+- Monthly revenue comparisons
+- Product performance status and recommendations
+- Ingredient breakdown for each item
+- Multi-item comparison capabilities
 
-### 3. Shipment Tracking
-- Bar chart showing shipment frequency by ingredient
-- Pie chart visualizing shipment distribution
-- Helps track delivery patterns and frequency
+Key insights the dashboard provides:
+- Identify top performing menu items and underperforming items
+- Track seasonal sales patterns and trends
+- Monitor ingredient usage and forecast future needs
+- Get recommendations for inventory management
+- Understand customer preferences and buying patterns
+- Analyze revenue by category and item
+- Get market intelligence for ingredients and business decisions
 
-### 4. Predictive Analytics
-- Forecasts next month's ingredient usage based on historical trend analysis
-- Uses moving averages and trend calculations to predict future demand
-- Helps plan inventory restocking
+## Datasets Used and Integration
 
-### 5. Cost Optimization
-- Identifies ingredients at risk of shortage (utilization > 90%)
-- Highlights overstocked items (utilization < 50%)
-- Shows optimal inventory levels
-- Provides actionable recommendations for inventory management
+The dashboard integrates the following data sources:
 
-## Datasets Used
+**Menu Items and Ingredients (MSY Data - Ingredient.csv)**
+- Contains menu items and their ingredient requirements
+- Maps each dish to specific ingredients and quantities
+- Used to calculate ingredient usage based on sales
 
-The dashboard integrates multiple data sources:
+**Shipment Data (MSY Data - Shipment.csv)**
+- Tracks ingredient shipments including quantity per shipment, units, and frequency
+- Used for inventory level analysis and cost optimization
+- Helps identify overstocked and understocked ingredients
 
-1. **Menu Items & Ingredient Usage** (`MSY Data - Ingredient.csv`)
-   - Contains menu items and their ingredient requirements
-   - Maps each dish to the ingredients and quantities needed
+**Monthly Sales Data (Excel files)**
+- May_Data_Matrix (1).xlsx
+- June_Data_Matrix.xlsx
+- July_Data_Matrix (1).xlsx
+- August_Data_Matrix (1).xlsx
+- September_Data_Matrix.xlsx
+- October_Data_Matrix_20251103_214000.xlsx
 
-2. **Shipment Data** (`MSY Data - Shipment.csv`)
-   - Tracks ingredient shipments including quantity, frequency, and number of shipments
-   - Used for cost optimization and inventory level analysis
+Each monthly file contains:
+- Sheet 1: Category-level sales data with counts and amounts
+- Sheet 2: Additional category sales data for detailed analysis
+- Item-level sales data for individual menu item analysis
 
-3. **Monthly Sales Data** (May - October CSV files)
-   - May_Data_Matrix (1).csv
-   - June_Data_Matrix.csv
-   - July_Data_Matrix (1).csv
-   - August_Data_Matrix (1).csv
-   - September_Data_Matrix.csv
-   - October_Data_Matrix_20251103_214000.csv
-   - Contains sales counts and amounts by category for each month
-   - Used to calculate ingredient consumption based on menu item sales
-
-### Data Integration
-
-The dashboard:
-- Maps sales categories to specific menu items
-- Calculates ingredient usage by multiplying menu item sales with ingredient requirements
-- Aggregates usage across months to identify trends
-- Matches ingredient names between menu items and shipment data for optimization analysis
-- Handles unit conversions (grams to pounds, etc.) where necessary
+**Data Integration Process**
+- Sales data is loaded from Excel files using XLSX library
+- Menu items and ingredients are parsed from CSV using PapaParse
+- Ingredient usage is calculated by multiplying menu item sales with ingredient requirements from the menu data
+- Monthly trends are aggregated across all months to identify patterns
+- Shipment data is matched with ingredient usage to calculate utilization percentages
+- Category and item-level data are processed separately for different analytical views
+- Unit conversions are handled where necessary (grams to pounds, etc.)
 
 ## Setup and Run Instructions
 
-### Prerequisites
-- Node.js 18+ installed
-- npm or yarn package manager
+**Prerequisites**
+- Node.js 18 or higher
+- npm package manager
 
-### Installation
+**Installation Steps**
 
-1. Clone the repository or navigate to the project directory:
-```bash
+1. Navigate to the project directory:
+```
 cd mai_shen_yun_business_analytics
 ```
 
 2. Install dependencies:
-```bash
+```
 npm install
 ```
 
-3. Ensure data files are in the `public/data/` directory:
-   - MSY Data - Ingredient.csv
-   - MSY Data - Shipment.csv
-   - May_Data_Matrix (1).csv
-   - June_Data_Matrix.csv
-   - July_Data_Matrix (1).csv
-   - August_Data_Matrix (1).csv
-   - September_Data_Matrix.csv
-   - October_Data_Matrix_20251103_214000.csv
+3. Set up environment variables:
+Create a `.env.local` file in the root directory with your Google Gemini API key:
+```
+GOOGLE_GEMINI_API_KEY=your_api_key_here
+```
+Get your API key from https://makersuite.google.com/app/apikey
 
-### Running the Dashboard
+4. Ensure data files are in place:
+All data files should be in the `public/data/` directory:
+- MSY Data - Ingredient.csv
+- MSY Data - Shipment.csv
+- May_Data_Matrix (1).xlsx
+- June_Data_Matrix.xlsx
+- July_Data_Matrix (1).xlsx
+- August_Data_Matrix (1).xlsx
+- September_Data_Matrix.xlsx
+- October_Data_Matrix_20251103_214000.xlsx
+
+**Running the Application**
 
 1. Start the development server:
-```bash
+```
 npm run dev
 ```
 
@@ -108,68 +120,67 @@ npm run dev
 http://localhost:3000
 ```
 
-3. The dashboard will load and display all visualizations and insights.
+3. The dashboard will load and display all analytics and visualizations.
 
-### Building for Production
+**Building for Production**
 
-To create an optimized production build:
-```bash
+To create a production build:
+```
 npm run build
 npm start
 ```
 
 ## Example Insights and Use Cases
 
-### Use Case 1: Identifying Overstocked Ingredients
-The Cost Optimization section highlights ingredients with utilization below 50%, indicating they are overstocked. Managers can use this to reduce shipment frequency and minimize waste.
+**Use Case 1: Identifying Best Sellers**
+The Quick Insights section on the Dashboard tab shows the top 3 best sellers for the current month. This helps identify which menu items are most popular and may need more inventory support.
 
-### Use Case 2: Preventing Shortages
-Ingredients with utilization above 90% are flagged as at risk of shortage. Managers can proactively increase shipment quantities or frequency to avoid running out.
+**Use Case 2: Finding Underperforming Items**
+The "Consider Replacing" section highlights items with 1 or fewer orders in the last 3 months. This helps identify menu items that may not be resonating with customers and could be replaced or removed.
 
-### Use Case 3: Planning Future Inventory
-The Predictive Analytics section forecasts next month's ingredient needs based on historical trends, helping managers plan purchases in advance.
+**Use Case 3: Inventory Management**
+The Inventory Analytics tab shows ingredient usage trends and estimated monthly needs. Managers can see which ingredients are being used most and forecast future requirements based on previous trends.
 
-### Use Case 4: Understanding Consumption Patterns
-The Monthly Usage Trends chart shows how ingredient consumption changes over time, helping identify seasonal patterns or changes in menu popularity.
+**Use Case 4: Seasonal Pattern Analysis**
+The monthly earnings progression chart shows sales trends over time. The AI Assistant can explain seasonal dips, such as decreased sales in June and July due to students leaving for summer vacation in College Station, TX.
 
-### Use Case 5: Optimizing Shipment Schedules
-The Shipment Tracking section visualizes current shipment frequencies, helping managers evaluate if adjustments are needed based on actual usage patterns.
+**Use Case 5: Ingredient Market Intelligence**
+When asking about specific ingredients in the AI Business Assistant, the system provides market conditions, latest news affecting supply, cost trends, and recommendations. This helps with purchasing decisions and cost management.
+
+**Use Case 6: Item Performance Tracking**
+The Item Analytics tab allows tracking individual menu item performance over time. Managers can compare sales and revenue across multiple items to identify trends and make menu optimization decisions.
+
+**Use Case 7: Category Revenue Analysis**
+The Monthly Breakdown Analysis shows revenue by category, helping identify which categories contribute most to overall sales. The pie chart visualization groups smaller categories for easier analysis.
+
+**Use Case 8: Inventory Optimization**
+The Inventory Analytics tab calculates estimated monthly needs based on previous trends with a 10% buffer. This helps prevent shortages while avoiding overstocking.
+
+**Use Case 9: Ingredient Usage by Dish**
+The Analyze Ingredient feature shows which dishes use the most of a specific ingredient. This helps understand ingredient dependencies and plan for menu changes.
+
+**Use Case 10: Multi-Item Comparison**
+The Item Analytics tab allows selecting multiple items for comparison. This helps identify patterns across items and make data-driven decisions about menu changes.
 
 ## Technical Stack
 
-- **Framework**: Next.js 16 (React)
-- **Language**: TypeScript
-- **Styling**: Tailwind CSS
-- **Charts**: Recharts
-- **Data Processing**: PapaParse (CSV parsing)
+- Next.js 16 (React framework)
+- TypeScript
+- Tailwind CSS for styling
+- Recharts for data visualization
+- PapaParse for CSV parsing
+- XLSX for Excel file processing
+- Google Gemini AI for business intelligence
+- React Markdown for formatted text rendering
 
 ## Project Structure
 
-```
-mai_shen_yun_business_analytics/
-├── app/
-│   ├── page.tsx          # Main dashboard page
-│   ├── layout.tsx        # Root layout
-│   └── globals.css       # Global styles
-├── components/
-│   ├── IngredientInsights.tsx    # Top/least used ingredients
-│   ├── MonthlyTrends.tsx         # Monthly usage trends
-│   ├── ShipmentTracking.tsx      # Shipment visualizations
-│   ├── PredictiveAnalytics.tsx   # Demand forecasting
-│   └── CostOptimization.tsx      # Optimization recommendations
-├── lib/
-│   ├── data-loader.ts    # CSV data loading utilities
-│   └── analytics.ts      # Data analysis and calculations
-└── public/
-    └── data/             # CSV data files
-```
+- app/: Next.js application files including API routes
+- components/: React components for dashboard views
+- lib/: Data loading and analytics utilities
+- public/data/: Data files (CSV and Excel)
+- app/api/chat/: AI chat API endpoint
 
-## Future Enhancements
+## Environment Variables
 
-Potential improvements for the dashboard:
-- Real-time data updates
-- Export functionality for reports
-- Custom date range selection
-- Ingredient-level drill-down views
-- Alert notifications for critical inventory levels
-- Integration with ordering systems
+- GOOGLE_GEMINI_API_KEY: Required for AI Business Assistant functionality
