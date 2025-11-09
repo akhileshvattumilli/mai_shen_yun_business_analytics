@@ -2,6 +2,14 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import * as XLSX from 'xlsx';
+import {
+  PieChart,
+  Pie,
+  Cell,
+  ResponsiveContainer,
+  Tooltip,
+  Legend
+} from 'recharts';
 
 interface MonthlyData {
   category: string;
@@ -20,6 +28,7 @@ type SortDirection = 'asc' | 'desc';
 export default function MonthlyBreakdown({ selectedMonth, selectedSheet }: MonthlyBreakdownProps) {
   const [data, setData] = useState<MonthlyData[]>([]);
   const [itemData, setItemData] = useState<MonthlyData[]>([]); // Always contains item-level data
+  const [categoryData, setCategoryData] = useState<MonthlyData[]>([]); // Category-level data for pie chart
   const [loading, setLoading] = useState(true); // Start with true for initial load
   const [initialLoad, setInitialLoad] = useState(true);
   const [totalEarnings, setTotalEarnings] = useState(0);
@@ -186,6 +195,79 @@ export default function MonthlyBreakdown({ selectedMonth, selectedSheet }: Month
     loadItemData();
   }, [selectedMonth]);
 
+  // Load category-level data for pie chart (from sheet 1 - 2nd sheet)
+  useEffect(() => {
+    if (!selectedMonth) {
+      setCategoryData([]);
+      return;
+    }
+
+    async function loadCategoryData() {
+      try {
+        const monthFiles: Record<string, string> = {
+          'May': 'May_Data_Matrix (1).xlsx',
+          'June': 'June_Data_Matrix.xlsx',
+          'July': 'July_Data_Matrix (1).xlsx',
+          'August': 'August_Data_Matrix (1).xlsx',
+          'September': 'September_Data_Matrix.xlsx',
+          'October': 'October_Data_Matrix_20251103_214000.xlsx',
+        };
+
+        const file = monthFiles[selectedMonth];
+        if (!file) {
+          setCategoryData([]);
+          return;
+        }
+
+        const response = await fetch(`/data/${file}`);
+        const arrayBuffer = await response.arrayBuffer();
+        const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+        
+        // Use sheet 1 (2nd sheet) for category data
+        const categorySheetIndex = workbook.SheetNames.length > 1 ? 1 : 0;
+        if (categorySheetIndex >= workbook.SheetNames.length) {
+          setCategoryData([]);
+          return;
+        }
+        
+        const categorySheetName = workbook.SheetNames[categorySheetIndex];
+        const categoryWorksheet = workbook.Sheets[categorySheetName];
+        
+        // Convert to JSON
+        const jsonData = XLSX.utils.sheet_to_json(categoryWorksheet);
+        
+        const categories: MonthlyData[] = [];
+
+        jsonData.forEach((row: any) => {
+          // Try different column name variations
+          const category = row.Category || row.Group || row.Item || row['Item Name'] || row.Name || 'Unknown';
+          const countStr = (row.Count || row.Quantity || '0').toString().replace(/,/g, '');
+          const amountStr = (row.Amount || row.Price || row['Total Amount'] || '$0')
+            .toString()
+            .replace(/[$,]/g, '');
+
+          const amount = parseFloat(amountStr) || 0;
+          const itemCount = parseInt(countStr) || 0;
+
+          if (category && category !== 'Unknown' && (amount > 0 || itemCount > 0)) {
+            categories.push({
+              category,
+              count: itemCount,
+              amount,
+            });
+          }
+        });
+
+        setCategoryData(categories);
+      } catch (error) {
+        console.error(`Error loading category data for ${selectedMonth}:`, error);
+        setCategoryData([]);
+      }
+    }
+
+    loadCategoryData();
+  }, [selectedMonth]);
+
   // Sort data based on selected column and direction
   const sortedData = useMemo(() => {
     if (!sortColumn) return data;
@@ -300,6 +382,53 @@ export default function MonthlyBreakdown({ selectedMonth, selectedSheet }: Month
       itemTotalEarnings,
     };
   }, [itemData]);
+
+  // Prepare category data for pie chart with "Other" grouping
+  const categoryPieData = useMemo(() => {
+    if (categoryData.length === 0) {
+      return { pieData: [], otherItems: [] };
+    }
+
+    const totalAmount = categoryData.reduce((sum, item) => sum + item.amount, 0);
+    
+    // Calculate all items with percentages
+    const allItems = categoryData
+      .filter(item => item.amount > 0)
+      .map(item => ({
+        name: item.category,
+        value: item.amount,
+        percentage: totalAmount > 0 ? (item.amount / totalAmount) * 100 : 0,
+      }))
+      .sort((a, b) => b.value - a.value);
+
+    // Separate items >= 5% and < 5%
+    const mainItems = allItems.filter(item => item.percentage >= 5);
+    const otherItems = allItems.filter(item => item.percentage < 5);
+
+    // Calculate "Other" total if there are items to group
+    let pieData;
+    if (otherItems.length > 0) {
+      const otherTotal = otherItems.reduce((sum, item) => sum + item.value, 0);
+      const otherPercentage = totalAmount > 0 ? (otherTotal / totalAmount) * 100 : 0;
+      
+      pieData = [
+        ...mainItems,
+        {
+          name: 'Other',
+          value: otherTotal,
+          percentage: otherPercentage,
+          isOther: true, // Flag to identify "Other" slice
+        }
+      ];
+    } else {
+      pieData = mainItems;
+    }
+
+    return { pieData, otherItems };
+  }, [categoryData]);
+
+  // Colors for pie chart
+  const COLORS = ['#ec4899', '#8b5cf6', '#06b6d4', '#f59e0b', '#10b981', '#ef4444', '#a855f7', '#14b8a6', '#f97316', '#84cc16', '#3b82f6', '#6366f1'];
 
   if (!selectedMonth) {
     return null;
@@ -441,6 +570,100 @@ export default function MonthlyBreakdown({ selectedMonth, selectedSheet }: Month
               </div>
             </div>
           </div>
+
+          {/* Category Sales Pie Chart */}
+          {categoryPieData.pieData.length > 0 && (
+            <div className="bg-slate-900/50 backdrop-blur-lg border border-slate-700/50 p-6 rounded-xl mb-6">
+              <h3 className="text-lg font-semibold text-gray-100 mb-4">Sales by Category</h3>
+              <ResponsiveContainer width="100%" height={400}>
+                <PieChart>
+                  <Pie
+                    data={categoryPieData.pieData}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={(entry: any) => {
+                      const percentage = entry.percentage ?? 0;
+                      return `${percentage.toFixed(1)}%`;
+                    }}
+                    outerRadius={120}
+                    fill="#8884d8"
+                    dataKey="value"
+                  >
+                    {categoryPieData.pieData.map((entry, index) => (
+                      <Cell 
+                        key={`cell-${index}`} 
+                        fill={entry.name === 'Other' ? '#6b7280' : COLORS[index % COLORS.length]} 
+                      />
+                    ))}
+                  </Pie>
+                  <Tooltip 
+                    contentStyle={{ 
+                      backgroundColor: '#1e293b', 
+                      border: '1px solid #475569',
+                      borderRadius: '8px',
+                      color: '#cbd5e1'
+                    }}
+                    content={({ active, payload }) => {
+                      if (!active || !payload || payload.length === 0) {
+                        return null;
+                      }
+                      const data = payload[0];
+                      const sliceColor = data.color || '#cbd5e1';
+                      const percentage = data.payload?.percentage ?? 0;
+                      const isOther = data.payload?.isOther;
+                      
+                      // If it's "Other", show the breakdown
+                      if (isOther && categoryPieData.otherItems.length > 0) {
+                        return (
+                          <div className="bg-slate-800 border border-slate-600 rounded-lg p-3 shadow-lg max-w-xs">
+                            <p className="font-semibold mb-2" style={{ color: sliceColor }}>
+                              {data.payload?.name || 'Other'}
+                            </p>
+                            <p className="text-sm text-gray-300 mb-3">
+                              ${data.value?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ({percentage.toFixed(1)}%)
+                            </p>
+                            <div className="border-t border-slate-600 pt-2 mt-2">
+                              <p className="text-xs font-medium text-gray-400 mb-2">Includes:</p>
+                              <div className="space-y-1 max-h-48 overflow-y-auto custom-scrollbar">
+                                {categoryPieData.otherItems.map((item, index) => (
+                                  <div key={index} className="flex justify-between items-center text-xs">
+                                    <span className="text-gray-300 truncate flex-1 mr-2">{item.name}</span>
+                                    <span className="text-gray-400 whitespace-nowrap">
+                                      {item.percentage.toFixed(1)}%
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      }
+                      
+                      // Regular tooltip for main items
+                      return (
+                        <div className="bg-slate-800 border border-slate-600 rounded-lg p-3 shadow-lg">
+                          <p className="font-semibold mb-2" style={{ color: sliceColor }}>
+                            {data.payload?.name || 'Unknown'}
+                          </p>
+                          <p className="text-sm text-gray-300">
+                            ${data.value?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ({percentage.toFixed(1)}%)
+                          </p>
+                        </div>
+                      );
+                    }}
+                  />
+                  <Legend 
+                    wrapperStyle={{ color: '#cbd5e1', fontSize: '12px' }}
+                    formatter={(value, entry: any) => {
+                      const percentage = entry.payload?.percentage ?? 0;
+                      return `${value} (${percentage.toFixed(1)}%)`;
+                    }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          )}
 
           {/* Data Table - Scrollable with max 10 visible rows */}
           <div className="rounded-xl border border-slate-700/50 overflow-hidden">

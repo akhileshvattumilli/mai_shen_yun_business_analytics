@@ -2,9 +2,10 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar } from 'recharts';
-import { MonthlyEarnings, MonthlyCategoryEarnings } from '../lib/data-loader';
+import { MonthlyEarnings, MonthlyCategoryEarnings, MenuItem } from '../lib/data-loader';
 import MonthlyBreakdown from './MonthlyBreakdown';
 import * as XLSX from 'xlsx';
+import Papa from 'papaparse';
 
 interface DashboardOverviewProps {
   monthlyEarnings: MonthlyEarnings[];
@@ -25,6 +26,7 @@ export default function DashboardOverview({ monthlyEarnings, monthlyCategoryEarn
   const [breakdownView, setBreakdownView] = useState<'overall' | 'byCategory'>('overall');
   const [itemSalesData, setItemSalesData] = useState<ItemSalesData[]>([]);
   const [loadingItems, setLoadingItems] = useState(false);
+  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const latestMonth = monthlyEarnings[monthlyEarnings.length - 1];
   const latestEarnings = latestMonth?.totalEarnings || 0;
   const latestCount = latestMonth?.transactionCount || 0;
@@ -46,6 +48,39 @@ export default function DashboardOverview({ monthlyEarnings, monthlyCategoryEarn
     : 0;
 
   const availableMonths = useMemo(() => monthlyEarnings.map((data) => data.month), [monthlyEarnings]);
+
+  // Load menu items on mount
+  useEffect(() => {
+    async function loadMenuItems() {
+      try {
+        const response = await fetch('/data/MSY Data - Ingredient.csv');
+        const text = await response.text();
+        Papa.parse(text, {
+          header: true,
+          complete: (results) => {
+            const items: MenuItem[] = results.data
+              .filter((row: any) => row['Item name'])
+              .map((row: any) => {
+                const ingredients: Record<string, number> = {};
+                Object.keys(row).forEach((key) => {
+                  if (key !== 'Item name' && row[key]) {
+                    ingredients[key] = parseFloat(row[key]) || 0;
+                  }
+                });
+                return {
+                  itemName: row['Item name'],
+                  ingredients,
+                };
+              });
+            setMenuItems(items);
+          },
+        });
+      } catch (error) {
+        console.error('Error loading menu items:', error);
+      }
+    }
+    loadMenuItems();
+  }, []);
 
   // Load item-level sales data for current month and last 3 months
   useEffect(() => {
@@ -122,6 +157,7 @@ export default function DashboardOverview({ monthlyEarnings, monthlyCategoryEarn
       return {
         bestSellers: [],
         considerReplacing: [],
+        orderMore: [],
       };
     }
 
@@ -132,6 +168,7 @@ export default function DashboardOverview({ monthlyEarnings, monthlyCategoryEarn
         return {
           bestSellers: [],
           considerReplacing: [],
+          orderMore: [],
         };
       }
 
@@ -164,18 +201,90 @@ export default function DashboardOverview({ monthlyEarnings, monthlyCategoryEarn
         .sort((a, b) => a[1] - b[1]) // Sort by count ascending (lowest first)
         .map(([itemName, count]) => ({ itemName, count }));
 
+      // Calculate ingredients to order more (based on increasing popularity)
+      // Compare current month to previous month to find items with increasing sales
+      const orderMoreIngredients: string[] = [];
+      if (availableMonths.length >= 2) {
+        const currentMonth = availableMonths[availableMonths.length - 1];
+        const previousMonth = availableMonths[availableMonths.length - 2];
+        
+        const currentMonthItems = itemSalesData.filter(item => item.month === currentMonth);
+        const previousMonthItems = itemSalesData.filter(item => item.month === previousMonth);
+        
+        // Create maps for easy lookup
+        const currentMonthMap: Record<string, number> = {};
+        const previousMonthMap: Record<string, number> = {};
+        
+        currentMonthItems.forEach(item => {
+          currentMonthMap[item.itemName] = (currentMonthMap[item.itemName] || 0) + item.count;
+        });
+        
+        previousMonthItems.forEach(item => {
+          previousMonthMap[item.itemName] = (previousMonthMap[item.itemName] || 0) + item.count;
+        });
+        
+        // Find items with increasing popularity (at least 20% growth or significant increase)
+        const increasingItems: string[] = [];
+        Object.keys(currentMonthMap).forEach(itemName => {
+          const currentCount = currentMonthMap[itemName] || 0;
+          const previousCount = previousMonthMap[itemName] || 0;
+          
+          // Item is increasing if:
+          // 1. It has at least 3 sales in current month AND
+          // 2. It has grown by at least 20% OR it went from 0 to positive sales
+          if (currentCount >= 3 && (
+            (previousCount > 0 && ((currentCount - previousCount) / previousCount) >= 0.2) ||
+            (previousCount === 0 && currentCount > 0)
+          )) {
+            increasingItems.push(itemName);
+          }
+        });
+        
+        // Map item names to ingredients
+        const ingredientUsage: Record<string, number> = {};
+        
+        increasingItems.forEach(itemName => {
+          // Try to find matching menu item (handle variations in naming)
+          const menuItem = menuItems.find(item => {
+            const normalizedMenuItem = item.itemName.toLowerCase().trim();
+            const normalizedSalesItem = itemName.toLowerCase().trim();
+            return normalizedMenuItem === normalizedSalesItem || 
+                   normalizedMenuItem.includes(normalizedSalesItem) ||
+                   normalizedSalesItem.includes(normalizedMenuItem);
+          });
+          
+          if (menuItem) {
+            Object.keys(menuItem.ingredients).forEach(ingredient => {
+              if (menuItem.ingredients[ingredient] > 0) {
+                // Clean ingredient name (remove units in parentheses)
+                const cleanIngredient = ingredient.replace(/\([^)]*\)/g, '').trim();
+                ingredientUsage[cleanIngredient] = (ingredientUsage[cleanIngredient] || 0) + 1;
+              }
+            });
+          }
+        });
+        
+        // Sort ingredients by usage frequency and take top ones
+        orderMoreIngredients.push(...Object.entries(ingredientUsage)
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 10)
+          .map(([ingredient]) => ingredient));
+      }
+
       return {
         bestSellers,
         considerReplacing,
+        orderMore: orderMoreIngredients,
       };
     } catch (error) {
       console.error('Error calculating quick insights:', error);
       return {
         bestSellers: [],
         considerReplacing: [],
+        orderMore: [],
       };
     }
-  }, [itemSalesData, availableMonths]);
+  }, [itemSalesData, availableMonths, menuItems]);
 
   // Get top 6 categories and combine the rest into "Other"
   // "Other" should always be at the top of the stack (rendered last)
@@ -334,7 +443,7 @@ export default function DashboardOverview({ monthlyEarnings, monthlyCategoryEarn
       {/* Quick Insights Section */}
       <div className="bg-slate-800/50 backdrop-blur-lg border border-slate-700/50 p-6 rounded-xl shadow-xl">
         <h3 className="text-xl font-semibold text-gray-100 mb-4">Quick Insights</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* This Month's Best Sellers */}
           <div className="bg-slate-900/50 backdrop-blur-lg border border-slate-700/50 p-4 rounded-xl">
             <h4 className="text-lg font-semibold text-pink-300 mb-3">This Month's Best Sellers</h4>
@@ -377,6 +486,27 @@ export default function DashboardOverview({ monthlyEarnings, monthlyCategoryEarn
               </div>
             ) : (
               <p className="text-sm text-gray-400">No items to suggest</p>
+            )}
+          </div>
+
+          {/* Order More */}
+          <div className="bg-slate-900/50 backdrop-blur-lg border border-slate-700/50 p-4 rounded-xl">
+            <h4 className="text-lg font-semibold text-green-300 mb-1">Order More</h4>
+            <p className="text-xs text-gray-400 mb-3">Due to increasing popularity</p>
+            {loadingItems ? (
+              <div className="flex items-center justify-center py-4">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-green-400"></div>
+              </div>
+            ) : quickInsights.orderMore && quickInsights.orderMore.length > 0 ? (
+              <div className="max-h-[140px] overflow-y-auto space-y-2 pr-2 custom-scrollbar">
+                {quickInsights.orderMore.map((ingredient, index) => (
+                  <div key={index} className="flex items-center p-2 bg-slate-700/30 rounded-lg min-h-[40px]">
+                    <span className="text-sm font-medium text-gray-200 flex-1 truncate">{ingredient}</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-gray-400">No ingredients to suggest</p>
             )}
           </div>
         </div>
