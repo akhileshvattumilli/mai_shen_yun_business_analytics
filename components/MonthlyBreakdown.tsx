@@ -436,8 +436,8 @@ export default function MonthlyBreakdown({ selectedMonth, selectedSheet }: Month
 
   // Show loading spinner only on initial load when there's no data
   if (initialLoad && loading && data.length === 0) {
-    return (
-      <div className="flex justify-center items-center py-8">
+  return (
+        <div className="flex justify-center items-center py-8">
         <div className="flex flex-col items-center gap-2">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-pink-400"></div>
           <p className="text-sm text-gray-300">Loading data...</p>
@@ -460,8 +460,8 @@ export default function MonthlyBreakdown({ selectedMonth, selectedSheet }: Month
       
       {/* Content - always visible, just dimmed when loading (only after initial load) */}
       <div className={loading && !initialLoad ? 'opacity-60 pointer-events-none' : ''}>
-        {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          {/* Summary Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
             <div className="bg-gradient-to-br from-pink-500/20 to-purple-500/20 backdrop-blur-lg border border-pink-400/30 p-4 rounded-xl">
               <p className="text-pink-300 text-sm font-medium mb-1">Total Earnings</p>
               <p className="text-2xl font-bold bg-gradient-to-r from-pink-400 to-purple-400 bg-clip-text text-transparent">

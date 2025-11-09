@@ -4,6 +4,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar } from 'recharts';
 import { MonthlyEarnings, MonthlyCategoryEarnings, MenuItem } from '../lib/data-loader';
 import MonthlyBreakdown from './MonthlyBreakdown';
+import AIBusinessChat from './AIBusinessChat';
 import * as XLSX from 'xlsx';
 import Papa from 'papaparse';
 
@@ -286,6 +287,45 @@ export default function DashboardOverview({ monthlyEarnings, monthlyCategoryEarn
     }
   }, [itemSalesData, availableMonths, menuItems]);
 
+  // Create business context for AI chat
+  const businessContext = useMemo(() => {
+    const contextParts: string[] = [];
+    
+    // Add earnings information
+    if (monthlyEarnings.length > 0) {
+      const latestMonthData = monthlyEarnings[monthlyEarnings.length - 1];
+      contextParts.push(`Latest Month (${latestMonthData.month}): Total Earnings: $${latestMonthData.totalEarnings.toLocaleString()}, Transactions: ${latestMonthData.transactionCount}`);
+      contextParts.push(`Yearly Total Earnings: $${yearlyEarnings.toLocaleString()}`);
+      contextParts.push(`Monthly Average Earnings: $${monthlyAverageEarnings.toLocaleString()}`);
+      if (growthPercentage !== 0) {
+        contextParts.push(`Month-over-month growth: ${growthPercentage > 0 ? '+' : ''}${growthPercentage.toFixed(1)}%`);
+      }
+    }
+    
+    // Add best sellers
+    if (quickInsights.bestSellers.length > 0) {
+      contextParts.push(`Top 3 Best Sellers: ${quickInsights.bestSellers.join(', ')}`);
+    }
+    
+    // Add items to consider replacing
+    if (quickInsights.considerReplacing.length > 0) {
+      const lowPerformingItems = quickInsights.considerReplacing.slice(0, 5).map(item => `${item.itemName} (${item.count} orders)`).join(', ');
+      contextParts.push(`Low performing items (consider replacing): ${lowPerformingItems}`);
+    }
+    
+    // Add ingredients to order more
+    if (quickInsights.orderMore && quickInsights.orderMore.length > 0) {
+      contextParts.push(`Ingredients to order more (increasing popularity): ${quickInsights.orderMore.slice(0, 10).join(', ')}`);
+    }
+    
+    // Add available months
+    if (availableMonths.length > 0) {
+      contextParts.push(`Available data months: ${availableMonths.join(', ')}`);
+    }
+    
+    return contextParts.join('\n');
+  }, [monthlyEarnings, yearlyEarnings, monthlyAverageEarnings, growthPercentage, quickInsights, availableMonths]);
+
   // Get top 6 categories and combine the rest into "Other"
   // "Other" should always be at the top of the stack (rendered last)
   const { topCategories, otherCategories } = useMemo(() => {
@@ -510,6 +550,11 @@ export default function DashboardOverview({ monthlyEarnings, monthlyCategoryEarn
             )}
           </div>
         </div>
+      </div>
+
+      {/* AI Business Chat */}
+      <div className="bg-slate-800/50 backdrop-blur-lg border border-slate-700/50 p-6 rounded-xl shadow-xl">
+        <AIBusinessChat businessContext={businessContext} />
       </div>
 
       {/* Monthly Earnings by Category - Stacked Bar Chart */}

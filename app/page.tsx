@@ -100,7 +100,7 @@ export default function Home() {
                 Business Analytics Dashboard
               </h1>
               <p className="mt-2 text-gray-300">
-                Transform raw restaurant data into actionable intelligence
+                Insights to serve our community better — 用数据传递温暖，用心服务每一餐
               </p>
             </div>
           </div>
