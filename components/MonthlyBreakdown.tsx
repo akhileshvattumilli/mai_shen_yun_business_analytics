@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import * as XLSX from 'xlsx';
 
 interface MonthlyData {
@@ -14,12 +14,17 @@ interface MonthlyBreakdownProps {
   selectedSheet: number;
 }
 
+type SortColumn = 'count' | 'amount' | 'percentage' | null;
+type SortDirection = 'asc' | 'desc';
+
 export default function MonthlyBreakdown({ selectedMonth, selectedSheet }: MonthlyBreakdownProps) {
   const [data, setData] = useState<MonthlyData[]>([]);
   const [loading, setLoading] = useState(false);
   const [totalEarnings, setTotalEarnings] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
   const [sheetNames, setSheetNames] = useState<string[]>([]);
+  const [sortColumn, setSortColumn] = useState<SortColumn>('amount');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
 
   useEffect(() => {
     if (!selectedMonth) {
@@ -89,12 +94,12 @@ export default function MonthlyBreakdown({ selectedMonth, selectedSheet }: Month
           }
         });
 
-        // Sort by amount descending
-        monthlyData.sort((a, b) => b.amount - a.amount);
-
         setData(monthlyData);
         setTotalEarnings(total);
         setTotalCount(count);
+        // Reset sort to default (amount descending) when data changes
+        setSortColumn('amount');
+        setSortDirection('desc');
         setLoading(false);
       } catch (error) {
         console.error(`Error loading ${selectedMonth} data:`, error);
@@ -104,6 +109,82 @@ export default function MonthlyBreakdown({ selectedMonth, selectedSheet }: Month
 
     loadMonthData();
   }, [selectedMonth, selectedSheet]);
+
+  // Sort data based on selected column and direction
+  const sortedData = useMemo(() => {
+    if (!sortColumn) return data;
+
+    const sorted = [...data].sort((a, b) => {
+      let aValue: number;
+      let bValue: number;
+
+      if (sortColumn === 'count') {
+        aValue = a.count;
+        bValue = b.count;
+      } else if (sortColumn === 'amount') {
+        aValue = a.amount;
+        bValue = b.amount;
+      } else if (sortColumn === 'percentage') {
+        aValue = totalEarnings > 0 ? (a.amount / totalEarnings) * 100 : 0;
+        bValue = totalEarnings > 0 ? (b.amount / totalEarnings) * 100 : 0;
+      } else {
+        return 0;
+      }
+
+      if (sortDirection === 'asc') {
+        return aValue - bValue;
+      } else {
+        return bValue - aValue;
+      }
+    });
+
+    return sorted;
+  }, [data, sortColumn, sortDirection, totalEarnings]);
+
+  // Handle column header click
+  const handleSort = (column: SortColumn) => {
+    if (sortColumn === column) {
+      // Toggle direction if clicking the same column
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      // Set new column and default to descending
+      setSortColumn(column);
+      setSortDirection('desc');
+    }
+  };
+
+  // Get sort arrow icon
+  const getSortArrow = (column: SortColumn) => {
+    if (sortColumn !== column) {
+      // Neutral up/down arrow for unsorted columns
+      return (
+        <span className="ml-1 text-gray-500 opacity-50">
+          <svg className="w-3 h-3 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+          </svg>
+        </span>
+      );
+    }
+    if (sortDirection === 'asc') {
+      // Up arrow for ascending
+      return (
+        <span className="ml-1 text-gray-300">
+          <svg className="w-3 h-3 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+          </svg>
+        </span>
+      );
+    } else {
+      // Down arrow for descending
+      return (
+        <span className="ml-1 text-gray-300">
+          <svg className="w-3 h-3 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </span>
+      );
+    }
+  };
 
   if (!selectedMonth) {
     return null;
@@ -133,47 +214,69 @@ export default function MonthlyBreakdown({ selectedMonth, selectedSheet }: Month
             </div>
           </div>
 
-          {/* Data Table */}
-          <div className="overflow-x-auto rounded-xl border border-slate-700/50">
-            <table className="min-w-full divide-y divide-slate-700/50">
-              <thead className="bg-slate-700/30">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-purple-300 uppercase tracking-wider">
-                    Category
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-pink-300 uppercase tracking-wider">
-                    Count
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-cyan-300 uppercase tracking-wider">
-                    Amount
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-yellow-300 uppercase tracking-wider">
-                    Percentage
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-slate-800/30 divide-y divide-slate-700/50">
-                {data.map((item, index) => {
-                  const percentage = totalEarnings > 0 ? (item.amount / totalEarnings) * 100 : 0;
-                  return (
-                    <tr key={index} className="hover:bg-slate-700/30 transition-colors">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-200">
-                        {item.category}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-pink-300 text-right">
-                        {item.count.toLocaleString()}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-cyan-300 text-right font-medium">
-                        ${item.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-yellow-300 text-right">
-                        {percentage.toFixed(1)}%
-                      </td>
+          {/* Data Table - Scrollable with max 10 visible rows */}
+          <div className="rounded-xl border border-slate-700/50 overflow-hidden">
+            <div className="overflow-x-auto">
+              <div className="max-h-[440px] overflow-y-auto">
+                <table className="min-w-full divide-y divide-slate-700/50">
+                  <thead className="bg-slate-800 sticky top-0 z-10 shadow-lg">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-purple-300 uppercase tracking-wider bg-slate-800">
+                        Category
+                      </th>
+                      <th 
+                        className="px-6 py-3 text-right text-xs font-medium text-pink-300 uppercase tracking-wider bg-slate-800 cursor-pointer hover:bg-slate-700 transition-colors select-none"
+                        onClick={() => handleSort('count')}
+                      >
+                        <div className="flex items-center justify-end">
+                          Count
+                          {getSortArrow('count')}
+                        </div>
+                      </th>
+                      <th 
+                        className="px-6 py-3 text-right text-xs font-medium text-cyan-300 uppercase tracking-wider bg-slate-800 cursor-pointer hover:bg-slate-700 transition-colors select-none"
+                        onClick={() => handleSort('amount')}
+                      >
+                        <div className="flex items-center justify-end">
+                          Amount
+                          {getSortArrow('amount')}
+                        </div>
+                      </th>
+                      <th 
+                        className="px-6 py-3 text-right text-xs font-medium text-yellow-300 uppercase tracking-wider bg-slate-800 cursor-pointer hover:bg-slate-700 transition-colors select-none"
+                        onClick={() => handleSort('percentage')}
+                      >
+                        <div className="flex items-center justify-end">
+                          Percentage
+                          {getSortArrow('percentage')}
+                        </div>
+                      </th>
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                  </thead>
+                  <tbody className="bg-slate-800/30 divide-y divide-slate-700/50">
+                    {sortedData.map((item, index) => {
+                      const percentage = totalEarnings > 0 ? (item.amount / totalEarnings) * 100 : 0;
+                      return (
+                        <tr key={index} className="hover:bg-slate-700/30 transition-colors">
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-200">
+                            {item.category}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-pink-300 text-right">
+                            {item.count.toLocaleString()}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-cyan-300 text-right font-medium">
+                            ${item.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-yellow-300 text-right">
+                            {percentage.toFixed(1)}%
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
         </>
       )}

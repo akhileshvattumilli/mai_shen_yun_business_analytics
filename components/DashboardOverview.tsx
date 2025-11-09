@@ -325,6 +325,7 @@ export default function DashboardOverview({ monthlyEarnings, monthlyCategoryEarn
               >
                 <option value={0} className="bg-slate-800">Overall</option>
                 <option value={1} className="bg-slate-800">By Category</option>
+                <option value={2} className="bg-slate-800">By Item</option>
               </select>
             )}
           </div>
