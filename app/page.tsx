@@ -1,22 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Image from 'next/image';
-import { loadMenuItems, loadShipments, loadSalesData, loadMonthlyEarnings, loadMonthlyCategoryEarnings, loadMonthlyCategoryEarningsSheet2 } from '../lib/data-loader';
-import {
-  calculateIngredientUsage,
-  getTopIngredients,
-  getLeastUsedIngredients,
-  predictNextMonthUsage,
-  calculateCostOptimization,
-  MonthlyIngredientUsage,
-} from '../lib/analytics';
-import IngredientInsights from '../components/IngredientInsights';
-import MonthlyTrends from '../components/MonthlyTrends';
-import ShipmentTracking from '../components/ShipmentTracking';
-import PredictiveAnalytics from '../components/PredictiveAnalytics';
-import CostOptimization from '../components/CostOptimization';
+import { loadShipments, loadMonthlyEarnings, loadMonthlyCategoryEarnings, loadMonthlyCategoryEarningsSheet2 } from '../lib/data-loader';
 import DashboardOverview from '../components/DashboardOverview';
+import ShipmentStatistics from '../components/ShipmentStatistics';
+import ItemAnalytics from '../components/ItemAnalytics';
 import Tabs from '../components/Tabs';
 
 export default function Home() {
@@ -25,40 +13,22 @@ export default function Home() {
   const [monthlyEarnings, setMonthlyEarnings] = useState<any[]>([]);
   const [monthlyCategoryEarnings, setMonthlyCategoryEarnings] = useState<any[]>([]);
   const [monthlyCategoryEarningsSheet2, setMonthlyCategoryEarningsSheet2] = useState<any[]>([]);
-  const [monthlyUsage, setMonthlyUsage] = useState<MonthlyIngredientUsage[]>([]);
-  const [topIngredients, setTopIngredients] = useState<any[]>([]);
-  const [leastUsedIngredients, setLeastUsedIngredients] = useState<any[]>([]);
   const [shipments, setShipments] = useState<any[]>([]);
-  const [predictions, setPredictions] = useState<Record<string, number>>({});
-  const [recommendations, setRecommendations] = useState<any[]>([]);
 
   useEffect(() => {
     async function loadData() {
       try {
-        const [earnings, categoryEarnings, categoryEarningsSheet2, menuItems, shipmentsData, salesData] = await Promise.all([
+        const [earnings, categoryEarnings, categoryEarningsSheet2, shipmentsData] = await Promise.all([
           loadMonthlyEarnings(),
           loadMonthlyCategoryEarnings(),
           loadMonthlyCategoryEarningsSheet2(),
-          loadMenuItems(),
           loadShipments(),
-          loadSalesData(),
         ]);
-
-        const usage = calculateIngredientUsage(menuItems, salesData);
-        const top = getTopIngredients(usage, 10);
-        const least = getLeastUsedIngredients(usage, 10);
-        const pred = predictNextMonthUsage(usage);
-        const recs = calculateCostOptimization(usage, shipmentsData);
 
         setMonthlyEarnings(earnings);
         setMonthlyCategoryEarnings(categoryEarnings);
         setMonthlyCategoryEarningsSheet2(categoryEarningsSheet2);
-        setMonthlyUsage(usage);
-        setTopIngredients(top);
-        setLeastUsedIngredients(least);
         setShipments(shipmentsData);
-        setPredictions(pred);
-        setRecommendations(recs);
         setLoading(false);
       } catch (error) {
         console.error('Error loading data:', error);
@@ -98,40 +68,14 @@ export default function Home() {
       id: 'inventory',
       label: 'Inventory Analytics',
       content: (
-        <div className="space-y-8">
-          {/* Ingredient Insights */}
-          <section>
-            <h2 className="text-2xl font-semibold mb-4 text-gray-100">Ingredient Insights</h2>
-            <IngredientInsights
-              topIngredients={topIngredients}
-              leastUsedIngredients={leastUsedIngredients}
-            />
-          </section>
-
-          {/* Monthly Trends */}
-          <section>
-            <h2 className="text-2xl font-semibold mb-4 text-gray-100">Monthly Usage Trends</h2>
-            <MonthlyTrends monthlyUsage={monthlyUsage} />
-          </section>
-
-          {/* Shipment Tracking */}
-          <section>
-            <h2 className="text-2xl font-semibold mb-4 text-gray-100">Shipment Tracking</h2>
-            <ShipmentTracking shipments={shipments} />
-          </section>
-
-          {/* Predictive Analytics */}
-          <section>
-            <h2 className="text-2xl font-semibold mb-4 text-gray-100">Predictive Analytics</h2>
-            <PredictiveAnalytics predictions={predictions} />
-          </section>
-
-          {/* Cost Optimization */}
-          <section>
-            <h2 className="text-2xl font-semibold mb-4 text-gray-100">Cost Optimization</h2>
-            <CostOptimization recommendations={recommendations} />
-          </section>
-        </div>
+        <ShipmentStatistics shipments={shipments} />
+      ),
+    },
+    {
+      id: 'items',
+      label: 'Item Analytics',
+      content: (
+        <ItemAnalytics />
       ),
     },
   ];
